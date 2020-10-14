@@ -12,7 +12,7 @@ module Xssh
         ec2 = ::Aws::EC2::Resource.new
 
         ec2.instances.map do |i|
-          host = i.tags.find{|h| h.key == 'Name' }.value
+          host = i.tags.find{|h| h.key == 'Name' }.value || i.instance_id
           next unless host =~ /#{query}/
           next unless i.state.name == "running"
 
@@ -21,6 +21,7 @@ module Xssh
 
           {
             type:         type,
+            name:         host,
             host:         host,
             host_name:    i.send("#{addr_type}_ip_address".to_sym),
             instance_id:  i.instance_id,
