@@ -1,4 +1,5 @@
-require 'aws-sdk-ec2'
+require 'xssh/aws/ec2'
+require 'xssh/aws/config'
 
 module Xssh
 
@@ -8,12 +9,20 @@ module Xssh
 
   module Aws
     class << self
-      def instance_souces(query='.*', **opts)
-        ec2 = ::Aws::EC2::Resource.new
+      def ec2
+        @ec2 ||= EC2.new
+      end
 
-        ec2.instances.map do |i|
-          host = i.tags.find{|h| h.key == 'Name' }.value || i.instance_id
-          next unless host =~ /#{query}/
+      def configure(&block)
+        @config = Config.new(block)
+      end
+
+      def instance_souces(query='.*', **opts)
+        instances = ec2.instances
+
+        instances.map do |i|
+          name = i.tags.find{|h| h.key == 'Name' }.value || i.instance_id
+          next unless name =~ /#{query}/
           next unless i.state.name == "running"
 
           addr_type = opts[:address_type] || :public
@@ -21,15 +30,13 @@ module Xssh
 
           {
             type:         type,
-            name:         host,
-            host:         host,
+            name:         name,
             host_name:    i.send("#{addr_type}_ip_address".to_sym),
             instance_id:  i.instance_id,
             aws:          i
           }
         end
       end
-
     end
   end
 end
